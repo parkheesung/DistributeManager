@@ -3,3 +3,10 @@
 ################################################################################
 
 /.vs/DistributeManager/v16
+/DistributeServer/bin/Debug
+/DistributeServer/obj/Debug
+/DistributeTool/bin/Debug
+/DistributeTool/obj/Debug
+/DM.Library/bin/Debug/netstandard2.0
+/DM.Library/obj
+/packages

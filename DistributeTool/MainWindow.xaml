@@ -1,0 +1,112 @@
+﻿<Window x:Class="DistributeTool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DistributeTool"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="35" />
+            <RowDefinition Height="35" />
+            <RowDefinition Height="5"/>
+            <RowDefinition />
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="35" />
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="35" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">서버주소</TextBlock>
+            <TextBox x:Name="TB_Server" Grid.Column="1" Padding="5,5,5,5" Margin="0,5,5,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">192.168.0.30</TextBox>
+            <TextBox x:Name="TB_Port" Grid.Column="2" Padding="5,5,5,5" Margin="0,5,5,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">25001</TextBox>
+        </Grid>
+
+        <Grid Grid.Row="0" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="Btn_Connect" Grid.Column="0" Margin="5,5,5,0" Padding="5,5,5,5" Click="Server_Connect_Click">접속</Button>
+            <TextBlock x:Name="Txt_Connect" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">NO Connection</TextBlock>
+        </Grid>
+
+        
+
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">원본경로</TextBlock>
+            <TextBox x:Name="TB_Original_Path" Grid.Column="1" Padding="5,5,5,5" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+            <Button Grid.Column="2" Margin="5,5,5,0" Padding="5,5,5,5" Click="Search_Original_Click">찾아보기</Button>
+        </Grid>
+
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">대상경로</TextBlock>
+            <TextBox x:Name="TB_Target_Path" Grid.Column="1" Padding="5,5,5,5" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+            <Button Grid.Column="2" Margin="5,5,5,0" Padding="5,5,5,5" Click="Search_Target_Click">찾아보기</Button>
+        </Grid>
+
+        <DataGrid x:Name="DataGrid_Original" Grid.Row="3" Grid.Column="0" />
+        <DataGrid x:Name="DataGrid_Target" Grid.Row="3" Grid.Column="1" />
+
+        <Grid Grid.Row="7" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Margin="5,0,0,5" Padding="5,5,5,5" Click="Load_Files_Click">불러오기</Button>
+            <Button Grid.Column="1" Margin="5,0,0,5" Padding="5,5,5,5">전체선택</Button>
+        </Grid>
+
+        <Grid Grid.Row="7" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="2" Margin="5,0,5,5" Padding="5,5,5,5" Background="#FF2CC10A" FontWeight="Bold" Click="Publish_Click">배포</Button>
+        </Grid>
+
+        <Grid Grid.Row="5" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">치환대상</TextBlock>
+            <TextBox x:Name="TB_Original_Replace" Grid.Column="1" Padding="5,5,5,5" Margin="0,5,5,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">X:\</TextBox>
+        </Grid>
+        <Grid Grid.Row="5" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">치환</TextBlock>
+            <TextBox x:Name="TB_Target_Replace" Grid.Column="1" Padding="5,5,5,5" Margin="0,5,5,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">D:\WebService\</TextBox>
+        </Grid>
+    </Grid>
+</Window>
