@@ -69,7 +69,6 @@
     <Compile Include="DManager.Designer.cs">
       <DependentUpon>DManager.cs</DependentUpon>
     </Compile>
-    <Compile Include="Models\AsyncObject.cs" />
     <Compile Include="Models\Logger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">

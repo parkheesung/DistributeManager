@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DM.Library;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +10,25 @@ namespace DistributeTool
 {
     public class FolderFileHelper : IDisposable
     {
+
         public List<FileInfo> Files { get; set; } = new List<FileInfo>();
+
+        public List<GridInfo> GetFiles
+
+        {
+            get
+            {
+                List<GridInfo> result = new List<GridInfo>();
+                if (this.Files != null && this.Files.Count > 0)
+                {
+                    foreach (FileInfo fi in this.Files)
+                    {
+                        result.Add(new GridInfo(fi));
+                    }
+                }
+                return result.OrderByDescending(x => x.LastUpdate).ToList();
+            }
+        }
 
         private bool disposedValue;
 

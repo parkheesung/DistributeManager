@@ -1,46 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using DM.Library;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Concurrent;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Forms;
-using System.IO;
 using System.Windows.Threading;
-using System.Data;
-using OctopusV3.Core;
-using System.Net.Sockets;
-using System.Threading;
-using System.Configuration;
-using DM.Library;
-using Newtonsoft.Json;
 
 namespace DistributeTool
 {
-    /// <summary>
-    /// MainWindow.xaml에 대한 상호 작용 논리
-    /// </summary>
     public partial class MainWindow : Window
     {
-        TcpClient Client;
-
-        StreamReader Reader;
-
-        StreamWriter Writer;
-
-        NetworkStream stream;
-
-        Thread ReceiveThread;
-
-        bool Connected;
+        delegate void AppendTextDelegate(string s);
 
         string ReplaceOriginal = string.Empty;
         string ReplaceTarget = string.Empty;
@@ -48,9 +20,24 @@ namespace DistributeTool
 
         public delegate void CallbackEvent(FolderFileHelper helper);
 
+        private delegate void AddTextDelegate(string strText);
+
+        private ConcurrentQueue<ServerCommand> WorkQueue { get; set; } = new ConcurrentQueue<ServerCommand>();
+
+        private System.Threading.Timer WorkTimer { get; set; }
+
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        void AppendText(string s)
+        {
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+            {
+                Txt_Status.AppendText(s);
+                Txt_Status.AppendText(Environment.NewLine);
+            }));
         }
 
         private void Search_Original_Click(object sender, RoutedEventArgs e)
@@ -73,44 +60,43 @@ namespace DistributeTool
 
         public void OriginalEventProc(FolderFileHelper helper)
         {
-            DataGrid_Original.ItemsSource = helper.Files.OrderByDescending(x => x.LastWriteTime);
+            string tmp = Txt_Filter.Text;
+            if (!string.IsNullOrWhiteSpace(tmp))
+            {
+                string[] arr = tmp.Split(';');
+                DataGrid_Original.ItemsSource = from c in helper.GetFiles
+                                                where !(from o in arr select o).Contains(c.Ext)
+                                                select c;
+            }
+            else
+            {
+                DataGrid_Original.ItemsSource = helper.GetFiles;
+            }
         }
-
-        public void TargetEventProc(FolderFileHelper helper)
-        {
-            DataGrid_Target.ItemsSource = helper.Files.OrderByDescending(x => x.LastWriteTime);
-        }
-
 
         private async void Load_Files_Click(object sender, RoutedEventArgs e)
         {
-            CallbackEvent origialEvent = new CallbackEvent(OriginalEventProc);
-            CallbackEvent targetEvent = new CallbackEvent(TargetEventProc);
-
-            await Task.Factory.StartNew(() =>
+            if (string.IsNullOrWhiteSpace(TB_Original_Path.Text))
             {
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
-                {
-                    using (var original = new FolderFileHelper(this))
-                    {
-                        original.GetAllFiles(TB_Original_Path.Text);
-                        origialEvent(original);
-                    }
-                }));
-
-            });
-
-            await Task.Factory.StartNew(() =>
+                System.Windows.Forms.MessageBox.Show("원본경로를 설정해 주세요.");
+            }
+            else
             {
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                CallbackEvent origialEvent = new CallbackEvent(OriginalEventProc);
+
+                await Task.Factory.StartNew(() =>
                 {
-                    using (var target = new FolderFileHelper(this))
+                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
                     {
-                        target.GetAllFiles(TB_Target_Path.Text);
-                        targetEvent(target);
-                    }
-                }));
-            });
+                        using (var original = new FolderFileHelper(this))
+                        {
+                            original.GetAllFiles(TB_Original_Path.Text);
+                            origialEvent(original);
+                        }
+                    }));
+
+                });
+            }
         }
 
         private void Publish_Click(object sender, RoutedEventArgs e)
@@ -118,35 +104,48 @@ namespace DistributeTool
             ReplaceOriginal = TB_Original_Replace.Text;
             ReplaceTarget = TB_Target_Replace.Text;
 
-
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+            if (string.IsNullOrWhiteSpace(TB_Original_Path.Text))
             {
-                var rows = DataGrid_Original.SelectedItems;
-                if (rows != null && rows.Count > 0)
-                {
-                    ServerCommand command = null;
-                    FileInfo file = null;
-                    string tmp = string.Empty;
-                    foreach(var row in rows)
-                    {
-                        file = row as FileInfo;
-                        command = new ServerCommand()
-                        {
-                            Command = "COPY",
-                            Original = file.FullName.Replace(ReplaceOriginal, ReplaceTarget),
-                            Target = ConvertPath(file.FullName).Replace(ReplaceOriginal, ReplaceTarget)
-                        };
+                System.Windows.Forms.MessageBox.Show("원본경로를 설정해 주세요.");
+            }
+            else if (string.IsNullOrWhiteSpace(TB_Target_Path.Text))
+            {
+                System.Windows.Forms.MessageBox.Show("대상경로를 설정해 주세요.");
+            }
+            else
+            {
 
-                        Writer.WriteLine(JsonConvert.SerializeObject(command)); // 보내버리기
-                        Writer.Flush();
-                    }
-                }
-                else
+                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
                 {
-                    System.Windows.MessageBox.Show("선택된 대상이 없습니다.");
-                }
-            }));
-            
+                    try
+                    {
+                        var rows = DataGrid_Original.SelectedItems;
+                        if (rows != null && rows.Count > 0)
+                        {
+                            ServerCommand command = null;
+                            foreach (GridInfo file in rows)
+                            {
+                                command = new ServerCommand()
+                                {
+                                    Command = "COPY",
+                                    Original = file.FullPath.Replace(ReplaceOriginal, ReplaceTarget),
+                                    Target = ConvertPath(file.FullPath).Replace(ReplaceOriginal, ReplaceTarget)
+                                };
+
+                                WorkQueue.Enqueue(command);
+                            }
+                        }
+                        else
+                        {
+                            AppendText("선택된 대상이 없습니다.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendText(ex.Message);
+                    }
+                }));
+            }
 
         }
 
@@ -154,60 +153,48 @@ namespace DistributeTool
         {
             if (Btn_Connect.Content.ToString() == "종료")
             {
-                if (Client != null)
+                SocketClient.Current.Dispose();
+                AppendText("접속이 종료됩니다.");
+                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
                 {
-                    Client.Close();
-                    Client.Dispose();
-                    ReceiveThread.Abort();
-
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
-                    {
-                        Txt_Connect.Text = "NO Connection";
-                        Btn_Connect.Content = "접속";
-                    }));
-                }
+                    Txt_Connect.Text = "NO Connection";
+                    Btn_Connect.Content = "접속";
+                }));
+                this.WorkTimer.Dispose();
+                this.WorkTimer = null;
             }
             else
             {
                 string IP = TB_Server.Text;
                 int port = Convert.ToInt32(TB_Port.Text);
-                Client = new TcpClient();
-                Client.Connect(IP, port);
-                stream = Client.GetStream();
-                Connected = true;
-                Reader = new StreamReader(stream);
-                Writer = new StreamWriter(stream);
-                ReceiveThread = new Thread(new ThreadStart(Receive));
-                ReceiveThread.Start();
-                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                SocketClient.Current.Setup(IP, port);
+                SocketClient.Current.Receive = new Action<string>((msg) =>
                 {
-                    Txt_Connect.Text = "Connected";
-                    Btn_Connect.Content = "종료";
-                }));
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        AppendText(msg);
+                    }
+                });
+                SocketClient.Current.Connect(() => {
+                    AppendText("서버에 접속되었습니다.");
+                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                    {
+                        Txt_Connect.Text = "Connected";
+                        Btn_Connect.Content = "종료";
+                    }));
+                });
+
+                this.WorkTimer = new System.Threading.Timer(Work_Tick, null, 1000, 1000);
             }
         }
 
-        private void Receive()
+        private void Work_Tick(object state)
         {
-            while (Connected)
+            ServerCommand command = null;
+            if (WorkQueue.TryDequeue(out command))
             {
-                Thread.Sleep(1);
-
-                try
-                {
-                    if (stream.CanRead)
-                    {
-                        string tempStr = Reader.ReadLine();
-
-                        if (tempStr.Length > 0)
-                        {
-
-                        }
-                    }
-                }
-                catch
-                {
-                }
+                SocketClient.Current.Send(JsonConvert.SerializeObject(command));
+                AppendText($"{command.Original} 파일을 복사 요청했습니다.");
             }
         }
 
