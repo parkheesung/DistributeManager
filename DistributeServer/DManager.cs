@@ -126,7 +126,6 @@ namespace DistributeServer
             }
             catch (Exception exp)
             {
-                throw exp;
                 Logger.Current.Error(exp);
             }
         }
