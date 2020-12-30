@@ -4,10 +4,12 @@ using OctopusV3.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace DistributeServer
 {
@@ -71,11 +73,10 @@ namespace DistributeServer
             this.WorkTimer = new Timer(Work_Tick, null, 1000, 1000);
         }
 
-        private void Work_Tick(object state)
+        private async void Work_Tick(object state)
         {
-            string body = string.Empty;
-            FileInfo fi = null;
             ServerCommand command = null;
+
             if (WorkQueue.TryDequeue(out command))
             {
                 if (command != null && !string.IsNullOrWhiteSpace(command.Command))
@@ -83,23 +84,53 @@ namespace DistributeServer
                     switch (command.Command.Trim().ToUpper())
                     {
                         case "COPY":
-                            fi = new FileInfo(command.Original);
+                            FileInfo fi = new FileInfo(command.Original);
                             if (fi.Exists)
                             {
-                                body = FileHelper.ReadFile(command.Original, Encoding.UTF8);
-                                FileHelper.WriteFile(command.Target, body, Encoding.UTF8, false);
+                                //File.Copy(command.Original, command.Target, true);
+                                await Task.Factory.StartNew(() => ProcessXcopy(command.Original, command.Target));
+
                                 AppendText($"파일 복사 : {command.Original}을(를) {command.Target}(으)로");
                             }
                             else
                             {
                                 AppendText($"파일 복사 실패 : {command.Original}을(를) 찾을 수 없습니다.");
                             }
-                            SocketServer.Current.Send(JsonConvert.SerializeObject(new ServerCommand() { Command = "Notice", Option = $"{command.Target}로 파일이 복사되었습니다." }));
                             break;
                     }
                 }
             }
         }
+
+        private void ProcessXcopy(string SolutionDirectory, string TargetDirectory)
+        {
+            // Use ProcessStartInfo class
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.CreateNoWindow = false;
+            startInfo.UseShellExecute = false;
+            //Give the name as Xcopy
+            startInfo.FileName = "xcopy";
+            //make the window Hidden
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            //Send the Source and destination as Arguments to the process
+            startInfo.Arguments = "\"" + SolutionDirectory + "\"" + " " + "\"" + TargetDirectory + "\"" + @" /e /y /I";
+
+            try
+            {
+                // Start the process with the info we specified.
+                // Call WaitForExit and then the using statement will close.
+                using (Process exeProcess = Process.Start(startInfo))
+                {
+                    exeProcess.WaitForExit();
+                }
+            }
+            catch (Exception exp)
+            {
+                throw exp;
+                Logger.Current.Error(exp);
+            }
+        }
+
 
         protected override void OnStop()
         {
