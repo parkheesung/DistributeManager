@@ -97,9 +97,88 @@ namespace DistributeServer
                                 AppendText($"파일 복사 실패 : {command.Original}을(를) 찾을 수 없습니다.");
                             }
                             break;
+                        case "CMD":
+                            if (!string.IsNullOrWhiteSpace(command.Original))
+                            {
+                                //File.Copy(command.Original, command.Target, true);
+                                await Task.Factory.StartNew(() => ProcessRun(command.Original));
+
+                                AppendText($"명령실행 : {command.Original}");
+                            }
+                            else
+                            {
+                                AppendText($"명령이 전달되지 않았습니다.");
+                            }
+                            break;
                     }
                 }
             }
+        }
+
+        private void ProcessRun(string command)
+        {
+            /*
+            using (var proc = new Process())
+            {
+                ProcessStartInfo info = new ProcessStartInfo();
+                info.FileName = @"cmd";
+                info.CreateNoWindow = true;  //cmd 창 띄움 여부 (true : 띄우지 않기, false : 띄우기)
+                info.UseShellExecute = false;
+                info.RedirectStandardOutput = true; //cmd창으로부터 데이터 받기
+                info.RedirectStandardInput = true; //cmd창으로 데이터 보내기
+                info.RedirectStandardError = true;  //cmd 오류내용 받기
+                proc.StartInfo = info;
+                proc.Start();
+
+                proc.StandardInput.Write(command);
+                proc.StandardInput.Close();
+                string message = proc.StandardOutput.ReadToEnd();
+                Logger.Current.Debug(message);
+                proc.WaitForExit();
+                proc.Close();
+            }
+            */
+            FileInfo fi = new FileInfo(command);
+            if (fi.Exists)
+            {
+                try
+                {
+                    int ExitCode;
+                    ProcessStartInfo ProcessInfo;
+                    Process process;
+
+                    ProcessInfo = new ProcessStartInfo("cmd.exe", "/c " + fi.Name);
+                    ProcessInfo.CreateNoWindow = true;
+                    ProcessInfo.UseShellExecute = false;
+                    ProcessInfo.WorkingDirectory = fi.DirectoryName;
+                    // *** Redirect the output ***
+                    ProcessInfo.RedirectStandardError = true;
+                    ProcessInfo.RedirectStandardOutput = true;
+
+                    process = Process.Start(ProcessInfo);
+                    process.WaitForExit();
+
+                    // *** Read the streams ***
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+
+                    ExitCode = process.ExitCode;
+
+                    AppendText(output);
+                    AppendText(error);
+
+                    process.Close();
+                }
+                catch (Exception ex)
+                {
+                    AppendText(ex.Message);
+                }
+            }
+            else
+            {
+                AppendText("대상 파일이 존재하지 않습니다.");
+            }
+
         }
 
         private void ProcessXcopy(string SolutionDirectory, string TargetDirectory)

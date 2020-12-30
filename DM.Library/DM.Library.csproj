@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="OctopusFramework.V3.Core" Version="0.1.0" />
+    <PackageReference Include="SSH.NET" Version="2016.1.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
   </ItemGroup>
 

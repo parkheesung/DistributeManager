@@ -11,3 +11,5 @@
 /DM.Library/obj
 /packages
 /.vs/DistributeManager/DesignTimeBuild
+/ExmaruServerManager/bin/Debug
+/ExmaruServerManager/obj/Debug
